@@ -1,0 +1,255 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadow-plugin";
+@import "@fontsource-variable/inter";
+
+/* Primary face. Open Runde ships as a single Regular (400) cut, so display type
+   never uses a bold weight (faux-bold is switched off below). Hierarchy comes
+   from size, tracking and colour. woff2 first, OTF as the fallback. */
+@font-face {
+  font-family: "Open Runde";
+  src:
+    url("/fonts/OpenRunde-Regular.woff2") format("woff2"),
+    url("/fonts/OpenRunde-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ------------------------------------------------------------------
+   Tokens: tweakcn "poppy-1", light only. Values below the
+   "Pramaan additions" line are ours; they are the roles the theme has no
+   token for (soft dividers, status text/fills, motion).
+   ------------------------------------------------------------------ */
+:root {
+  color-scheme: light;
+  --radius: 1rem;
+
+  --background: oklch(0.9789 0.0082 121.6272);
+  --foreground: oklch(0 0 0);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0 0 0);
+
+  --primary: oklch(0.5106 0.2301 276.9656);
+  --primary-foreground: oklch(1 0 0);
+
+  --secondary: oklch(0.7038 0.123 182.5025);
+  --secondary-foreground: oklch(1 0 0);
+
+  --muted: oklch(0.9551 0 0);
+  --muted-foreground: oklch(0.3211 0 0);
+
+  --accent: oklch(0.7686 0.1647 70.0804);
+  --accent-foreground: oklch(0 0 0);
+
+  --destructive: oklch(0.6368 0.2078 25.3313);
+  --destructive-foreground: oklch(1 0 0);
+
+  --border: oklch(0 0 0);
+  --input: oklch(0.5555 0 0);
+  --ring: oklch(0.7853 0.1041 274.7134);
+
+  --chart-1: oklch(0.5106 0.2301 276.9656);
+  --chart-2: oklch(0.7038 0.123 182.5025);
+  --chart-3: oklch(0.7686 0.1647 70.0804);
+  --chart-4: oklch(0.6559 0.2118 354.3084);
+  --chart-5: oklch(0.7227 0.192 149.5793);
+
+  --sidebar: oklch(0.9789 0.0082 121.6272);
+  --sidebar-foreground: oklch(0 0 0);
+  --sidebar-primary: oklch(0.5106 0.2301 276.9656);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.7686 0.1647 70.0804);
+  --sidebar-accent-foreground: oklch(0 0 0);
+  --sidebar-border: oklch(0 0 0 / 0.1);
+  --sidebar-ring: oklch(0.7853 0.1041 274.7134);
+
+  /* --- Pramaan additions ------------------------------------------ */
+  /* The theme's border is pure black: right for the outline of a surface,
+     too loud for every row divider inside one. */
+  --hairline: oklch(0 0 0 / 0.1);
+  --primary-soft: oklch(0.95 0.03 277);
+  --primary-soft-foreground: oklch(0.4 0.2 277);
+
+  --success: oklch(0.42 0.12 150);
+  --success-soft: oklch(0.95 0.06 150);
+  --warning: oklch(0.44 0.1 65);
+  --warning-soft: oklch(0.96 0.07 85);
+  --danger: oklch(0.5 0.19 26);
+  --danger-soft: oklch(0.96 0.03 25);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-ui: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@theme inline {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Open Runde", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-hairline: var(--hairline);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Type scale, named by use. Sizes step down with heading level. */
+  --text-display: 2.5rem;
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.03em;
+  --text-title: 2rem;
+  --text-title--line-height: 1.1;
+  --text-title--letter-spacing: -0.025em;
+  --text-heading: 1.25rem;
+  --text-heading--line-height: 1.2;
+  --text-heading--letter-spacing: -0.015em;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.5;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.4;
+  --text-eyebrow: 0.6875rem;
+  --text-eyebrow--line-height: 1.2;
+  --text-eyebrow--letter-spacing: 0.08em;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background font-sans text-body text-foreground antialiased;
+    font-feature-settings: "cv11", "ss03";
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Faux-bold on a single-weight face distorts it; never synthesize. */
+  .font-display {
+    font-synthesis-weight: none;
+    font-weight: 400;
+  }
+
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  /* Numbers that change or align in columns. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  button, [role="button"], [role="tab"], [role="menuitem"], [role="option"] {
+    cursor: default;
+  }
+}
+
+/* Reduced motion: keep state changes, drop movement. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Decorative loops for the landing/login hero art. Entrance transitions
+   (fade/slide-in on mount or in-view) use tw-animate-css's animate-in
+   utilities instead; these are only for the continuous ambient motion
+   it doesn't cover.
+   ------------------------------------------------------------------ */
+@layer utilities {
+  @keyframes spin-slow {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes spin-slow-reverse {
+    to { transform: rotate(-360deg); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes pulse-ring {
+    0% { transform: scale(0.9); opacity: 0.6; }
+    70%, 100% { transform: scale(1.6); opacity: 0; }
+  }
+  @keyframes scan-line {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+  }
+
+  .animate-spin-slow {
+    animation: spin-slow 16s linear infinite;
+  }
+  .animate-spin-slow-reverse {
+    animation: spin-slow-reverse 22s linear infinite;
+  }
+  .animate-float {
+    animation: float 5s ease-in-out infinite;
+  }
+  .animate-pulse-ring {
+    animation: pulse-ring 2.8s cubic-bezier(0.2, 0, 0, 1) infinite;
+  }
+  .animate-scan-line {
+    animation: scan-line 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+}

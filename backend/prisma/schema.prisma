@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./app.db"
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  username   String   @unique
+  email      String   @unique
+  password   String
+  last_login DateTime?
+  created_at DateTime @default(now())
+  cases      Case[]
+}
+
+model Case {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  created_at  DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      Int
+  images      ImageFile[]
+
+  @@index([userId])
+}
+
+model ImageFile {
+  id           Int      @id @default(autoincrement())
+  filename     String
+  path_on_disk String
+  hash_sha256  String?
+  size_bytes   Int?
+  created_at   DateTime @default(now())
+  case         Case     @relation(fields: [caseId], references: [id])
+  caseId       Int
+
+  forensics ForensicsData[]
+
+  @@unique([path_on_disk, caseId])
+  @@index([caseId])
+}
+
+// Generic forensic-data store, keyed by image + type (e.g. "master_sector", "system_logs").
+// Hikvision-specific parsing is out of scope, but the same table shape covers any future type.
+model ForensicsData {
+  id          Int      @id @default(autoincrement())
+  dataType    String
+  data        String
+  created_at  DateTime @default(now())
+  image_file  ImageFile @relation(fields: [imageFileId], references: [id])
+  imageFileId Int
+
+  @@unique([imageFileId, dataType])
+  @@index([imageFileId])
+}

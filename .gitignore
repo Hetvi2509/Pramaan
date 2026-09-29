@@ -1,0 +1,53 @@
+# Claude Code (skills, local settings)
+.claude/
+
+# Dependencies & build output
+node_modules
+dist
+dist-ssr
+release
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Python engine
+__pycache__
+*.pyc
+.venv
+build/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Evidence & reference material (never commit forensic images)
+*.E01
+*.Ex01
+*.dd
+*.img
+*.raw
+__MACOSX/
+
+# Datasets (614MB, re-fetch via dataset/README.md)
+dataset/
+!dataset/README.md
+!dataset/MANIFEST.sha256
+
+# Runtime data & generated artifacts (never source, and app.db holds real user records)
+backend/uploads/
+backend/outputs/
+backend/prisma/*.db
+backend/prisma/*.db-journal
+backend/test-assets/
+checkpoints/
+scratch/

@@ -1,0 +1,15 @@
+flask>=3.1.2
+huggingface-hub[hf-xet]>=0.35.3
+libewf-python
+numpy>=2.3.4
+opencv-contrib-python>=4.10.0.84
+opencv-python>=4.11.0.86
+paddleocr[all]>=3.2.0
+paddlepaddle>=3.2.0
+pillow>=12.0.0
+platformdirs>=4.5.0
+pyinstaller>=6.16.0
+pytest>=8.4.2
+scenedetect>=0.6.2
+screeninfo>=0.8.1
+tqdm>=4.67.1

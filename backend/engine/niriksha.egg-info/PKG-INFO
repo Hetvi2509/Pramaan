@@ -1,0 +1,24 @@
+Metadata-Version: 2.4
+Name: niriksha
+Version: 0.1.1
+Summary: Add your description here
+Home-page: https://www.dvr-scan.com/
+Author: Brandon Castellano
+Author-email: brandon248@gmail.com
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+Requires-Dist: flask>=3.1.2
+Requires-Dist: huggingface-hub[hf-xet]>=0.35.3
+Requires-Dist: libewf-python
+Requires-Dist: numpy>=2.3.4
+Requires-Dist: opencv-contrib-python>=4.10.0.84
+Requires-Dist: opencv-python>=4.11.0.86
+Requires-Dist: paddleocr[all]>=3.2.0
+Requires-Dist: paddlepaddle>=3.2.0
+Requires-Dist: pillow>=12.0.0
+Requires-Dist: platformdirs>=4.5.0
+Requires-Dist: pyinstaller>=6.16.0
+Requires-Dist: pytest>=8.4.2
+Requires-Dist: scenedetect>=0.6.2
+Requires-Dist: screeninfo>=0.8.1
+Requires-Dist: tqdm>=4.67.1

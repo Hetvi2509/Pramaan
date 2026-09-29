@@ -1,0 +1,25 @@
+# Requirements for the core dvr-scan-engine
+numpy
+opencv-python
+opencv-contrib-python
+pillow
+platformdirs
+scenedetect>=0.6.2
+tqdm
+libewf-python
+pytsk3
+setuptools==69.5.1
+
+# Detection Dependencies
+face_recognition
+scikit-learn
+torch
+# torchvision
+rfdetr
+supervision
+
+paddleocr[all]>=3.2.0
+paddlepaddle>=3.2.0
+paddlex
+# Flask
+pyinstaller==5.13.2

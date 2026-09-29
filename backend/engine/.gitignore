@@ -1,0 +1,13 @@
+models/ocr/
+models/object/
+
+criminal_detection/output/
+criminal_detection/known_faces/
+
+models/object_detection/
+models/upscayl/
+
+upscayl-cli/output/
+upscayl-cli/input/
+
+cache/
