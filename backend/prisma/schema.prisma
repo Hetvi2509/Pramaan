@@ -58,3 +58,62 @@ model ForensicsData {
   @@unique([imageFileId, dataType])
   @@index([imageFileId])
 }
+
+// Append-only chain of custody. One hash chain per case; no relation on purpose so events outlive their case.
+model CustodyEvent {
+  id         Int    @id @default(autoincrement())
+  caseId     Int
+  seq        Int
+  ts         String
+  actor      String
+  action     String
+  filename   String?
+  sha256     String?
+  detail     String?
+  prev_hash  String
+  event_hash String
+
+  @@unique([caseId, seq])
+}
+
+// Forensic knowledge: traits observed on past evidence, kept so a later image can be compared against them.
+// Separate from case evidence on purpose — this layer holds technique, never the footage itself.
+// Scoped per user: one analyst's knowledge base is not another's.
+model Fingerprint {
+  id             Int      @id @default(autoincrement())
+  kind           String   // "device" (a parser matched) or "unknown" (generic/learned)
+  label          String
+  tokens         String   // JSON array of observed trait tokens; similarity is Jaccard over this set
+  features       String   // JSON object, the readable detail behind the tokens
+  vendor_guess   String?
+  confidence     Float
+  status         String   // OBSERVED | CANDIDATE | VALIDATED | REJECTED
+  observations   Int      @default(1)
+  sources        String   // JSON array of {caseId, imageFileId, filename, sha256, at}
+  parser_version String
+  note           String?
+  first_seen     DateTime @default(now())
+  last_seen      DateTime @default(now())
+  userId         Int
+
+  @@index([userId, kind])
+}
+
+// What an analysis tool (motion, objects, faces) found in one clip. Kept per case so Analytics and
+// Correlation can read real results. When the clip is a recovered recording, its channel and recorder-clock
+// start are copied in so detections can be placed on the shared timeline.
+model AnalysisResult {
+  id          Int      @id @default(autoincrement())
+  caseId      Int
+  kind        String   // motion | objects | faces
+  source      String   // clip file name
+  imageFileId Int?
+  recordingId String?
+  channel     Int?
+  clip_start  String?  // recorder clock, as parsed from the image
+  clip_end    String?
+  data        String   // JSON: { appearances: [{class,start_s,end_s,confidence?}], duration_s?, output? }
+  created_at  DateTime @default(now())
+
+  @@index([caseId])
+}

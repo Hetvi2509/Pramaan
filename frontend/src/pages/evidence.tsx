@@ -121,7 +121,10 @@ function AddImageSheet({
   onAdded: () => void
 }) {
   const [acquired, setAcquired] = useState<Date | undefined>(today)
-  const [blocker, setBlocker] = useState(true)
+  const [blocker, setBlocker] = useState(false) // a statement about the examiner's work: never pre-ticked
+  const [source, setSource] = useState("dd")
+  const [zone, setZone] = useState("ist")
+  const [notes, setNotes] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -131,12 +134,13 @@ function AddImageSheet({
     if (!file) return toast.error("Choose a file first")
     setBusy(true)
     try {
-      const res = await api.addImage(caseId, file)
+      const res = await api.addImage(caseId, file, { source, acquiredOn: acquired ? format(acquired, "yyyy-MM-dd") : null, timeZone: zone, writeBlocker: blocker, notes })
       toast.success("Hashed and added", {
         description: `${res.data.filename} — SHA-256 ${res.data.hash_sha256?.slice(0, 12)}…`,
       })
       onOpenChange(false)
       setFile(null)
+      setNotes("")
       onAdded()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to add image")
@@ -176,14 +180,14 @@ function AddImageSheet({
 
             <Field>
               <FieldLabel>Source</FieldLabel>
-              <Select defaultValue="e01">
+              <Select value={source} onValueChange={setSource}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="e01">Acquired image (EWF)</SelectItem>
-                  <SelectItem value="dd">Raw image (dd)</SelectItem>
-                  <SelectItem value="disk">Physical disk, via write-blocker</SelectItem>
+                  <SelectItem value="e01">Expert Witness image (.E01)</SelectItem>
+                  <SelectItem value="dd">Raw image (.dd, .img)</SelectItem>
+                  <SelectItem value="file">Video file or other export</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -195,7 +199,7 @@ function AddImageSheet({
               </Field>
               <Field>
                 <FieldLabel>Recorder time zone</FieldLabel>
-                <Select defaultValue="ist">
+                <Select value={zone} onValueChange={setZone}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -214,13 +218,13 @@ function AddImageSheet({
                 <FieldLabel htmlFor="wb" className="font-medium">
                   Hardware write-blocker used
                 </FieldLabel>
-                <FieldDescription>Recorded on the Section 63 certificate.</FieldDescription>
+                <FieldDescription>Stated in the audit trail and on the report.</FieldDescription>
               </div>
             </Field>
 
             <Field>
               <FieldLabel htmlFor="notes">Custody notes</FieldLabel>
-              <Textarea id="notes" rows={3} placeholder="Seal number, who handed over the disk, condition" />
+              <Textarea id="notes" rows={3} maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Seal number, who handed over the disk, condition" />
               <FieldDescription className="tnum">
                 Entry will be logged {format(today, "d MMM yyyy")} and hash-chained.
               </FieldDescription>

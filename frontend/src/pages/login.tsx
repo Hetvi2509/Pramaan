@@ -18,7 +18,7 @@ import { HeroVisual } from "@/components/pramaan/hero-visual"
 import { api, setSession } from "@/lib/api"
 
 const highlights = [
-  { icon: UsbIcon, text: "Write-blocked disk acquisition, hashed at every step" },
+  { icon: UsbIcon, text: "Disk images hashed on intake and re-checked before use" },
   { icon: FilmStripIcon, text: "Recovery with a quality gate, not just carved files" },
   { icon: EraserIcon, text: "Deletion explained, with a timeline of what happened" },
   { icon: FingerprintIcon, text: "Chain of custody logged for every action" },
@@ -28,12 +28,12 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [busy, setBusy] = useState(false)
-  const [lu, setLu] = useState("admin")
-  const [lp, setLp] = useState("password")
-  const [su, setSu] = useState("admin")
-  const [se, setSe] = useState("admin@ntro.ac.in")
-  const [sp, setSp] = useState("password")
-  const [sc, setSc] = useState("password")
+  const [lu, setLu] = useState("")
+  const [lp, setLp] = useState("")
+  const [su, setSu] = useState("")
+  const [se, setSe] = useState("")
+  const [sp, setSp] = useState("")
+  const [sc, setSc] = useState("")
 
   async function login(e: React.FormEvent) {
     e.preventDefault()
@@ -148,11 +148,11 @@ export default function LoginPage() {
                 <FieldGroup className="gap-5">
                   <Field>
                     <FieldLabel htmlFor="lu">Username</FieldLabel>
-                    <Input id="lu" value={lu} onChange={(e) => setLu(e.target.value)} autoComplete="username" />
+                    <Input id="lu" required value={lu} onChange={(e) => setLu(e.target.value)} autoComplete="username" />
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="lp">Password</FieldLabel>
-                    <Input id="lp" type="password" value={lp} onChange={(e) => setLp(e.target.value)} autoComplete="current-password" />
+                    <Input id="lp" type="password" required value={lp} onChange={(e) => setLp(e.target.value)} autoComplete="current-password" />
                   </Field>
                   <Button type="submit" className="w-full" disabled={busy}>Log in</Button>
                 </FieldGroup>
@@ -167,19 +167,19 @@ export default function LoginPage() {
                 <FieldGroup className="gap-5">
                   <Field>
                     <FieldLabel htmlFor="su">Username</FieldLabel>
-                    <Input id="su" value={su} onChange={(e) => setSu(e.target.value)} autoComplete="username" />
+                    <Input id="su" required value={su} onChange={(e) => setSu(e.target.value)} autoComplete="username" />
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="se">Email</FieldLabel>
-                    <Input id="se" type="email" value={se} onChange={(e) => setSe(e.target.value)} autoComplete="email" />
+                    <Input id="se" type="email" required value={se} onChange={(e) => setSe(e.target.value)} autoComplete="email" />
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="sp">Password</FieldLabel>
-                    <Input id="sp" type="password" value={sp} onChange={(e) => setSp(e.target.value)} autoComplete="new-password" />
+                    <Input id="sp" type="password" required minLength={6} value={sp} onChange={(e) => setSp(e.target.value)} autoComplete="new-password" />
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="sc">Confirm password</FieldLabel>
-                    <Input id="sc" type="password" value={sc} onChange={(e) => setSc(e.target.value)} autoComplete="new-password" />
+                    <Input id="sc" type="password" required value={sc} onChange={(e) => setSc(e.target.value)} autoComplete="new-password" />
                   </Field>
                   <Button type="submit" className="w-full" disabled={busy}>Create account</Button>
                 </FieldGroup>

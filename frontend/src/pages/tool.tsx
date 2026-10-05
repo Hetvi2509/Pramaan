@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { useParams } from "react-router-dom"
 import { DownloadSimpleIcon, FileVideoIcon, UploadSimpleIcon, XIcon } from "@phosphor-icons/react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { LogPanel, OutputDir, useOutputDir, useTaskRun } from "@/components/pramaan/tool-bits"
 import { PageHeader } from "@/components/pramaan/page-header"
+import { SurveillancePlayer } from "@/components/pramaan/video-player"
 import { api } from "@/lib/api"
 
 type F = { id: string; label: string; value: string; options?: string[]; hint?: string }
@@ -126,7 +128,7 @@ const tools: Record<ToolKind, Tool> = {
     perf: [],
     run: "Start upscaling",
     out: true,
-    note: "Interpolation cannot recover missing detail. AI output is watermarked as illustrative. Your original image is preserved.",
+    note: "Interpolation cannot recover missing detail. AI output is watermarked as illustrative. Your original image is preserved. The Upscayl (AI) method needs a graphics driver with Vulkan support; Lanczos works on any machine.",
     log: ["[PYTHON LOG] INFO: Registering 8 neighbouring frames", "[UPSCALE] Sub-pixel alignment error 0.12 px", "[UPSCALE] Averaging → 2× output", `[PYTHON LOG] INFO: Saved frame_000412_x2.png`, "[PROCESS] Process exited with code 0"],
     done: "The upscaled image is ready.",
   },
@@ -158,6 +160,30 @@ function FieldInput({ f, value, onChange }: { f: F; value: string; onChange: (v:
 }
 
 type UploadedFile = { name: string; path: string }
+type RecoveredClip = { key: string; imageId: number; recordingId: string; label: string }
+
+/** Recordings already recovered and decode-checked in this case: their channel and recorder time are known. */
+function useRecoveredClips(caseId: string) {
+  const [clips, setClips] = useState<RecoveredClip[]>([])
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      const found: RecoveredClip[] = []
+      for (const image of (await api.listImages(caseId)).data) {
+        const data: any = (await api.getForensics(image.id)).data
+        for (const r of data.recordings ?? []) {
+          const ex = data[`extraction_${r.id}`]
+          if (ex?.output && ex.gate?.result === "passed")
+            found.push({ key: `${image.id}:${r.id}`, imageId: image.id, recordingId: r.id,
+              label: `${image.filename} · ${r.channel != null ? `channel ${r.channel}` : "channel unknown"} · ${r.start ?? "time unknown"}` })
+        }
+      }
+      if (live) setClips(found)
+    })().catch(() => {})
+    return () => { live = false }
+  }, [caseId])
+  return clips
+}
 
 // Map a tool's field values + uploaded input paths to the backend task settings shape
 // (see backend/src/index.ts buildArgs, ported from Niriksha's electron-main.ts IPC listeners).
@@ -191,7 +217,7 @@ function buildSettings(tool: ToolKind, files: UploadedFile[], values: Record<str
     case "faces":
       return { task: "index", video_path: files[0]?.path, output_dir: dir ?? undefined }
     case "objects":
-      return { video: files[0]?.path, output: dir ? `${dir}\\objects_out.mp4` : undefined, model: "base" }
+      return { video: files[0]?.path, output: dir ? `${dir.replace(/[\\/]+$/, "")}\\objects-${Date.now()}.mp4` : undefined, model: "base" }
     case "upscale":
       return { image: files[0]?.path, outputDir: dir, scale: Number.parseInt(values.scale, 10), method: values.method?.startsWith("Upscayl") ? "upscayl" : "lanczos" }
   }
@@ -206,6 +232,10 @@ export default function ToolPage({ tool }: { tool: ToolKind }) {
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries([...t.scan, ...t.perf].map((f) => [f.id, f.value])))
   const [done, setDone] = useState(false)
   const [dir] = useOutputDir()
+  const { caseId = "" } = useParams()
+  const clips = useRecoveredClips(caseId)
+  const [clipKey, setClipKey] = useState("none")
+  const clip = clips.find((c) => c.key === clipKey)
   const fileInput = useRef<HTMLInputElement>(null)
   const log = useTaskRun((success) => {
     setDone(success)
@@ -214,12 +244,16 @@ export default function ToolPage({ tool }: { tool: ToolKind }) {
     })
   })
   const run = () => {
-    if ((tool === "ocr" || tool === "upscale") && !dir) {
-      toast.error("Set an output directory first.")
+    if (!dir) {
+      toast.error("The output folder is still loading. Try again in a moment.")
       return
     }
     setDone(false)
-    log.start(tool, buildSettings(tool, files, values, checks, dry, dir))
+    const settings = buildSettings(tool, clip ? [] : files, values, checks, dry, dir)
+    // Tie the run to this case (and to the recovered clip, if one was chosen) so Analytics and Correlation can use it.
+    const tied = tool === "ocr" || tool === "upscale" ? { ...settings, caseId: Number(caseId) }
+      : { ...settings, caseId: Number(caseId), ...(clip ? { clip: { imageId: clip.imageId, recordingId: clip.recordingId } } : {}) }
+    log.start(tool, tied)
   }
 
   async function onPickFiles(fileList: FileList | null) {
@@ -268,6 +302,23 @@ export default function ToolPage({ tool }: { tool: ToolKind }) {
               {uploading ? "Uploading…" : "Browse files"}
             </Button>
           </div>
+          {tool !== "ocr" && tool !== "upscale" && (
+            <Field>
+              <FieldLabel htmlFor="recovered-clip">Or analyse a recovered clip</FieldLabel>
+              <Select value={clipKey} onValueChange={(v) => { setClipKey(v); setDone(false) }}>
+                <SelectTrigger id="recovered-clip" className="w-full" aria-label="Recovered clip"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Use the uploaded file</SelectItem>
+                  {clips.map((c) => <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <FieldDescription>
+                {clips.length
+                  ? "A recovered clip carries its channel and recorder time, so what is found can be placed on the timeline. An uploaded file has no known recording time."
+                  : "No recovered clips yet. Recover a recording on the Recovery page and it will be listed here."}
+              </FieldDescription>
+            </Field>
+          )}
           {files.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -335,7 +386,7 @@ export default function ToolPage({ tool }: { tool: ToolKind }) {
         <CardContent className="space-y-4">
           {log.running && <Progress value={log.progress} className="h-1.5" />}
           <div className="flex items-center gap-6">
-            <Button size="lg" className="min-w-48" disabled={!files.length || log.running || uploading} onClick={run}>
+            <Button size="lg" className="min-w-48" disabled={(!files.length && !clip) || log.running || uploading} onClick={run}>
               {log.running ? "Running…" : t.run}
             </Button>
             {t.dry && (
@@ -361,14 +412,14 @@ export default function ToolPage({ tool }: { tool: ToolKind }) {
                     {tool === "upscale" ? (
                       <img src={api.outputFileUrl(log.outputPath)} alt="Upscaled image" className="mx-auto max-h-[70vh] w-auto max-w-full rounded-lg border object-contain" />
                     ) : (
-                      <video src={api.outputFileUrl(log.outputPath)} controls className="mx-auto max-h-[70vh] w-auto max-w-full rounded-lg border bg-black object-contain" aria-label="OCR output with detected text boxes" />
+                      <SurveillancePlayer src={api.outputFileUrl(log.outputPath)} title="Analysis output" />
                     )}
                     <DownloadOutput path={log.outputPath} />
                   </div>
                 ) : <p className="text-muted-foreground">No output was produced. See the log for details.</p>
               ) : log.outputPath ? (
                 <div className="space-y-3">
-                  <video src={api.outputFileUrl(log.outputPath)} controls className="mx-auto max-h-[70vh] w-auto max-w-full rounded-lg border bg-black object-contain" />
+                  <SurveillancePlayer src={api.outputFileUrl(log.outputPath)} title="Analysis output" />
                   <div className="flex items-center justify-between">
                     <p className="font-mono text-caption text-muted-foreground">{log.outputPath.split(/[\\/]/).pop()}</p>
                     <DownloadOutput path={log.outputPath} />
@@ -377,6 +428,12 @@ export default function ToolPage({ tool }: { tool: ToolKind }) {
               ) : (
                 <RealOutput dir={dir} />
               )
+            ) : log.failure && !log.running ? (
+              <div role="alert" className="space-y-2 rounded-lg border border-destructive/40 bg-destructive/5 p-5">
+                <p className="font-medium text-destructive">The run did not finish</p>
+                <p className="text-body whitespace-pre-wrap">{log.failure}</p>
+                <p className="text-caption text-muted-foreground">The full log is further down this page.</p>
+              </div>
             ) : (
               <p className="rounded-lg border border-dashed py-14 text-center text-muted-foreground">
                 {log.running ? "Processing…" : "The annotated video and its detections appear here after the run."}
@@ -422,7 +479,7 @@ function RealOutput({ dir }: { dir: string | null }) {
         // eslint-disable-next-line jsx-a11y/alt-text
         <img src={url} className="mx-auto max-h-[70vh] w-auto max-w-full rounded-lg border object-contain" />
       ) : (
-        <video src={url} controls className="mx-auto max-h-[70vh] w-auto max-w-full rounded-lg border bg-black object-contain" />
+        <SurveillancePlayer src={url} />
       )}
       <div className="flex items-center justify-between">
         <p className="font-mono text-caption text-muted-foreground">{file.name}</p>

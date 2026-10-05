@@ -1,0 +1,72 @@
+{
+  "name": "pramaan-desktop",
+  "version": "0.5.2",
+  "private": true,
+  "description": "Pramaan DVR/NVR forensic analysis platform",
+  "main": "main.js",
+  "scripts": {
+    "stage": "node stage.mjs",
+    "dist": "node stage.mjs && electron-builder --win nsis --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "rcedit": "^4.0.1"
+  },
+  "build": {
+    "appId": "in.pramaan.forensics",
+    "productName": "Pramaan",
+    "directories": {
+      "output": "../dist-app",
+      "buildResources": "assets"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "assets/icon.png"
+    ],
+    "extraResources": [
+      {
+        "from": "../build/app/backend",
+        "to": "backend"
+      },
+      {
+        "from": "../build/app/frontend",
+        "to": "frontend"
+      },
+      {
+        "from": "../build/app/seed",
+        "to": "seed"
+      }
+    ],
+    "asar": true,
+    "compression": "maximum",
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Pramaan-Setup-${version}.${ext}",
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Pramaan",
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "installerHeaderIcon": "icon.ico"
+    },
+    "afterPack": "after-pack.js"
+  }
+}

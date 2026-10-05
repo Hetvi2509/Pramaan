@@ -22,8 +22,8 @@ import { cn } from "@/lib/utils"
 const features = [
   {
     icon: UsbIcon,
-    title: "Write-blocked acquisition",
-    desc: "Image a DVR/NVR disk behind a hardware write-blocker, hashed at every stage.",
+    title: "Hashed on intake",
+    desc: "Add a DVR/NVR disk image taken behind a write-blocker. It is hashed on the way in and re-checked before use.",
   },
   {
     icon: FilmStripIcon,

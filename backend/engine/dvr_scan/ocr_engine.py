@@ -6,14 +6,19 @@ from pathlib import Path
 import numpy as np
 
 def get_resource_path(relative_path: str) -> Path:
-    try:
-        base_path = Path(sys._MEIPASS)
-    except Exception:
-        # ponytail: fixed an off-by-one here — this file lives at <engine>/dvr_scan/ocr_engine.py,
-        # so two .parent hops reach <engine>, matching where download_ocr_models.py and the
-        # PyInstaller spec (dvr-scan-engine.spec) both expect models/ to live.
-        base_path = Path(__file__).resolve().parent.parent
-    return base_path / relative_path
+    """models/ ships beside the executable when frozen, so it can be updated or downloaded separately
+    from the engine; falls back to the PyInstaller bundle, then to the source tree beside this package."""
+    roots = []
+    if getattr(sys, "frozen", False):
+        roots.append(Path(sys.executable).resolve().parent)
+        if hasattr(sys, "_MEIPASS"):
+            roots.append(Path(sys._MEIPASS))
+    roots.append(Path(__file__).resolve().parent.parent)
+    for root in roots:
+        if (candidate := root / relative_path).exists():
+            return candidate
+    return roots[0] / relative_path
+
 
 # --- Model and Environment Setup ---
 try:

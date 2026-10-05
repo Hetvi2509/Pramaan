@@ -50,7 +50,7 @@ def run_video_detection(weights_path: str, model_name: str, video_path: str, out
 
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    fps = int(cap.get(cv2.CAP_PROP_FPS)) or 25
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -62,6 +62,8 @@ def run_video_detection(weights_path: str, model_name: str, video_path: str, out
     print(f"Processing video: {video_path}")
     progress = tqdm(total=total_frames, desc="Detecting Objects")
     batch_frames = []
+    seen = []  # (frame_number, class name, confidence), kept so the results can be listed, not only drawn
+    counted = [0]
 
     def flush(batch):
         if not batch:
@@ -82,6 +84,9 @@ def run_video_detection(weights_path: str, model_name: str, video_path: str, out
                 for class_id, confidence
                 in zip(detections.class_id, detections.confidence)
             ]
+            seen.extend((counted[0], COCO_CLASSES.get(int(c), "Unknown"), float(p))
+                        for c, p in zip(detections.class_id, detections.confidence))
+            counted[0] += 1
             annotated_frame = box_annotator.annotate(scene=frame.copy(), detections=detections)
             annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
             out.write(annotated_frame)
@@ -105,6 +110,33 @@ def run_video_detection(weights_path: str, model_name: str, video_path: str, out
     # -------------------------------------------------------------------------------
 
     print(f"Video processing complete. Annotated video saved to: {output_path}")
+    return write_appearances(seen, fps, counted[0], video_path, output_path)
+
+
+def write_appearances(seen, fps, frames, video_path, output_path, max_gap_s=1.0):
+    """Merge per-frame detections into appearances: the same class seen again within max_gap_s is one
+    appearance. Times are seconds into the clip; the clip's own start time is the caller's to add."""
+    import json
+    last = {}
+    appearances = []
+    for frame, name, confidence in sorted(seen):
+        current = last.get(name)
+        if current and (frame - current["_last"]) / fps <= max_gap_s:
+            current["_last"] = frame
+            current["frames"] += 1
+            current["confidence"] = max(current["confidence"], confidence)
+        else:
+            current = {"class": name, "_first": frame, "_last": frame, "frames": 1, "confidence": confidence}
+            last[name] = current
+            appearances.append(current)
+    for a in appearances:
+        a["start_s"], a["end_s"] = round(a.pop("_first") / fps, 2), round((a.pop("_last") + 1) / fps, 2)
+        a["confidence"] = round(a["confidence"], 3)
+    sidecar = output_path + ".detections.json"
+    with open(sidecar, "w", encoding="utf-8") as handle:
+        json.dump({"video": video_path, "fps": fps, "frames": frames, "duration_s": round(frames / fps, 2),
+                   "appearances": appearances}, handle, indent=1)
+    return sidecar
 
 def main():
     parser = argparse.ArgumentParser(

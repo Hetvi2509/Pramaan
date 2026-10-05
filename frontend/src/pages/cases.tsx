@@ -22,7 +22,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle, EmptyContent } from "
 import { DatePicker, DateRangePicker } from "@/components/pramaan/date-picker"
 import { PageHeader } from "@/components/pramaan/page-header"
 import { StageBadge } from "@/components/pramaan/status"
-import type { CaseStage } from "@/lib/mock"
+import type { CaseStage } from "@/components/pramaan/status"
 import { api, type ApiCase } from "@/lib/api"
 
 const stages: CaseStage[] = ["Intake", "Parsing", "Recovering", "Analysing", "Report ready", "Sealed"]

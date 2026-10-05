@@ -8,6 +8,35 @@ SIH 2026 · Problem Statement 150</p>
 
 ---
 
+## Download
+
+**Windows 10 / 11 (64-bit) installer:** [`Pramaan-Setup-0.5.2.exe` (1.15 GB)](https://github.com/Hetvi2509/SIH_PS_150/releases/download/v0.5.2/Pramaan-Setup-0.5.2.exe)
+
+Everything runs on your computer, offline: no Python, Node or database to install, and the video, OCR,
+face, object and upscaling tools are bundled. All releases: [Releases page](https://github.com/Hetvi2509/SIH_PS_150/releases).
+
+1. Download the installer and run it. Windows SmartScreen may say "Windows protected your PC" because the
+   installer is not code-signed: choose **More info → Run anyway**. Pick any drive; it needs about 5 GB.
+2. On first launch, choose a folder for case data (database, evidence, recovered video), then **Sign up**.
+   Accounts exist only on that computer.
+3. Optional, for the **Sahayak** case assistant (chat button, bottom right): paste a free
+   [Groq API key](https://console.groq.com/keys) into the panel once. It is stored in your data folder, never
+   bundled in the installer. This is the only feature that uses the internet: your questions and the case
+   details needed to answer them are sent to Groq. Without a key, nothing leaves your computer.
+
+Verify the download (PowerShell): `Get-FileHash .\Pramaan-Setup-0.5.2.exe -Algorithm SHA256` should print
+
+```
+0dd5786a083d22d02f260a8f26c71a3ce17b85811beabeaa9cf6476f7b78546b
+```
+
+Windows N / KN editions need Microsoft's Media Feature Pack first. Pramaan analyses disk images; it does not
+image a drive itself, so acquire the image first behind a hardware write blocker.
+
+To run from source instead, see [Getting started](#7-getting-started).
+
+---
+
 ## 1. What this is
 
 CCTV DVRs/NVRs each store video in a different proprietary on-disk format (Hikvision, Dahua,
@@ -121,6 +150,7 @@ difference on-screen. To read the codebase the same way:
 | Hikvision parsing (master sector, HIKBTREE, logs) (M1/M2) | **Real** — `backend/engine/dvr_scan/hikvision/` |
 | Motion / OCR / face / object detection / upscale (M7) | **Real** — actually spawns the Python engine and runs the models |
 | Report generation (M9) | **Real** — pulls live case/evidence/forensics data, renders a print-ready PDF (browser print-to-PDF) + JSON, hash-stamped |
+| Assistant (Sahayak) | **Real** — read-only tool-calling agent over the case database and the glossary; needs `GROQ_API_KEY` |
 | Deletion analysis, timeline witnesses, cross-camera correlation, OEM comparison (M5/M6/M7-correlation) | **UI fixtures** (`frontend/src/lib/mock.ts`) — the screens, data shapes and interactions are built against `plan.md`'s spec so the real analysis can be wired in without changing the UI, but the numbers shown are illustrative, not computed |
 
 ---
@@ -138,11 +168,14 @@ SIH-2026-PS150/
 │   ├── src/lib/api.ts          # Typed fetch client + SSE subscriber for the backend
 │   ├── src/lib/report.ts       # Report data assembly + printable HTML/JSON generation
 │   ├── src/lib/mock.ts         # Fixture data for modules not yet wired to real analysis
+│   ├── src/lib/chat.ts         # Assistant transport + the "what screen am I on" snapshot
+│   └── src/components/pramaan/chat-widget.tsx  # Sahayak, the case assistant panel
 │   └── DESIGN.md               # UI design language (theme, type, colour semantics)
 ├── backend/                    # Node.js API server
 │   ├── src/index.ts            # Express routes: auth, cases, evidence, forensics, tasks, SSE
 │   ├── src/engine.ts           # Spawns the Python engine, parses its JSON-lines protocol
 │   ├── src/auth.ts, db.ts      # JWT auth, Prisma client
+│   ├── src/chat/               # Sahayak: tool-calling loop, read-only lookups, glossary, prompt
 │   ├── prisma/schema.prisma    # User / Case / ImageFile / ForensicsData models (SQLite)
 │   └── engine/                 # The Python forensic engine (see below)
 │       ├── dvr_scan/           # CLI entrypoint, Hikvision adapter, forensics.py, OCR, region editor
@@ -209,6 +242,7 @@ and every write is attributable to the authenticated user.
 | `GET /api/tasks/:id/stream` | SSE stream of a running task's log/progress/result |
 | `GET /api/outputs`, `/api/outputs/file` | List/serve files the engine wrote to an output directory (with on-the-fly transcode for browser preview) |
 | `POST /api/uploads` | Generic file upload for tool inputs |
+| `POST /api/chat/query` | Ask Sahayak a question about the case or a term (read-only; see §8) |
 
 All routes except `/api/health` and auth require `Authorization: Bearer <token>`.
 
@@ -261,6 +295,9 @@ Environment variables (all optional — sensible defaults are used if unset):
 | `DATABASE_URL` | `file:./app.db` (from `schema.prisma`) | Override the SQLite location |
 | `STORAGE_DIR` | `backend/` | Where `uploads/` and `outputs/` are written |
 | `PYTHON_EXE` | `backend/engine/.venv/Scripts/python.exe` if present, else `python` | Override the Python interpreter used to spawn the engine |
+| `GROQ_API_KEY` | unset | Enables the assistant. Without it `/api/chat/query` returns 503 and every other route is unaffected. Copy `backend/.env.example` to `backend/.env`. |
+| `CHAT_MODELS` | `openai/gpt-oss-120b,qwen/qwen3.8-27b,openai/gpt-oss-20b,openai/gpt-oss-safeguard-20b` | Tried in order. Groq's free tier meters 8,000 tokens/minute *per model*, so each extra model is its own pool; a rate-limited model is skipped until its cooldown ends, and if all are limited the request waits up to 15 s before answering 503 with the real wait time |
+| `CHAT_BASE_URL` | `https://api.groq.com/openai/v1` | Any OpenAI-compatible chat-completions endpoint |
 
 ### 2. Frontend
 
@@ -295,6 +332,26 @@ and video-analysis tools from the sidebar → generate a report from the **Repor
   was altered after export.
 - **Nothing is silently skipped.** Sections of the report that depend on data not yet available
   (e.g. a missing seizure-time clock anchor) are listed as open items with a reason, not omitted.
+- **The assistant cannot write, and not because it was asked not to.** Sahayak
+  (`backend/src/chat/`) answers questions about the open case and explains the terminology on
+  screen. It is a tool-calling loop over an OpenAI-compatible endpoint, and the tools it is given
+  are six fixed Prisma reads plus a glossary lookup — there is no SQL surface and no write path,
+  so a jailbroken model has nothing to reach for. `userId` is closed over from the verified JWT
+  rather than being a tool argument, so it cannot ask for another examiner's case; that is
+  exercised in both directions during testing. The screen snapshot the widget sends is only
+  *context* (which tab is open, and what a fixture screen is showing) — every fact the assistant
+  asserts about a case it reads from the database itself.
+- **Fixtures are labelled to the model, not hidden from it.** The snapshot marks the illustrative
+  screens as illustrative, and the system prompt requires the assistant to say so when it quotes
+  one. The same rule applies to times without their sigma, and to face grouping, which it must
+  present as a lead and never as an identification.
+- **Each answer prints the lookups behind it.** The widget shows "From case record, glossary,
+  parsed disk data" under the reply, so a claim in the chat can be traced the same way a number
+  on a screen can.
+- **The model list is a fallback chain, not a single model.** Groq returns 429 for the rest of
+  the minute once a model's budget is spent; `CHAT_MODELS` is tried in order on a 429/5xx or a
+  timeout, and only a non-capacity error (a 400, a bad tool schema) is raised straight through —
+  retrying those elsewhere just repeats the same mistake.
 
 ---
 
@@ -306,3 +363,27 @@ Finale. In short: wire the remaining modules (M3 schema induction, M5 deletion a
 timeline normalisation, M7 triage/correlation) from UI fixtures to the real forensic engine, add
 Dahua/CP Plus/Honeywell adapters alongside the existing Hikvision one, and validate everything
 against real seized-and-imaged hardware rather than synthetic data.
+
+## Windows desktop app
+
+`Pramaan-Setup-0.5.0.exe` installs the whole platform as a Windows application that works offline: the web
+interface, the backend, the forensic engine and the analysis models (OCR, face, object, motion, upscaling).
+
+**Build** (see `desktop/`): freeze the engine with PyInstaller (`backend/engine/pramaan-engine.spec`), run
+`ENGINE_BUILD=<engine folder> node desktop/stage.mjs`, then `electron-builder --win nsis`.
+
+**Requirements**
+- 64-bit Windows 10 or 11, about 5 GB free for the install, plus room for your case data.
+- Windows **N / KN** editions need Microsoft's *Media Feature Pack* (the engine's OpenCV links Media Foundation).
+- The optional *Upscayl (AI)* upscaling method needs a graphics driver with Vulkan support. The default Lanczos
+  method works on any machine.
+- The installer is not code-signed, so Windows SmartScreen shows a warning on first run.
+
+**Where things go**
+- The installer lets you choose the install folder (per-user or all users).
+- On first launch the app asks where to keep case data (database, evidence, recovered video). Pick a folder on the
+  drive with the most space. The app refuses a folder inside its own program folder, because **uninstalling deletes
+  the program folder and everything in it**. If you cancel the prompt, data goes in a `Pramaan Data` folder next to
+  the install folder.
+- To reuse existing data after reinstalling, choose the same data folder again.
+- Uninstalling leaves a data folder that is outside the program folder untouched.

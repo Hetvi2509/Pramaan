@@ -1,7 +1,9 @@
 import { CheckCircleIcon, WarningIcon, CircleNotchIcon, CircleDashedIcon } from "@phosphor-icons/react"
 import { Badge } from "@/components/ui/badge"
-import type { CaseStage, FootageStatus } from "@/lib/mock"
 import { cn } from "@/lib/utils"
+
+export type CaseStage = "Intake" | "Parsing" | "Recovering" | "Analysing" | "Report ready" | "Sealed"
+export type FootageStatus = "live" | "deleted" | "repaired" | "excluded"
 
 const stageTone: Record<CaseStage, "neutral" | "primary" | "success" | "warning"> = {
   Intake: "neutral",

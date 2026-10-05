@@ -13,6 +13,7 @@ import AcquisitionPage from "@/pages/acquisition"
 import CorrelationPage from "@/pages/correlation"
 import DevicePage from "@/pages/device"
 import OemPage from "@/pages/oem"
+import KnowledgePage from "@/pages/knowledge"
 import ExplorerPage from "@/pages/explorer"
 import LoginPage from "@/pages/login"
 import LandingPage from "@/pages/landing"
@@ -48,6 +49,7 @@ const router = createHashRouter([
       { path: "cases/:caseId/correlation", element: <CorrelationPage /> },
       { path: "oem", element: <OemPage /> },
       { path: "audit", element: <AuditPage /> },
+      { path: "knowledge", element: <KnowledgePage /> },
     ],
   },
 ])

@@ -333,8 +333,9 @@ def run_object_detection_command(args):
         # LAZY IMPORT: Import only when needed
         from object_detection import inference as object_detection_cli
         logger.info("Executing object detection task.")
-        object_detection_cli.run_video_detection(args.weights, args.model, args.video, args.output)
-        print(json.dumps({"type": "object_detection_complete", "success": True, "output_path": args.output}), flush=True)
+        sidecar = object_detection_cli.run_video_detection(args.weights, args.model, args.video, args.output)
+        print(json.dumps({"type": "object_detection_complete", "success": True, "output_path": args.output,
+                          "detections_path": sidecar}), flush=True)
     except Exception as e:
         logger.error(f"Object detection failed: {str(e)}", exc_info=True)
         print(json.dumps({"type": "object_detection_error", "success": False, "error": str(e)}), flush=True)

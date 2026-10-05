@@ -17,13 +17,13 @@ const tone: Record<Status, "success" | "primary" | "warning" | "neutral"> = { ha
 // Status follows plan.md Section 4.1: a figure is only shown for a vendor we actually imaged.
 const oems = [
   { name: "Hikvision", status: "hardware" as Status, layout: "MPEG-PS in HIKBTREE blocks", time: "Local clock as epoch (verify)", frames: "0.98", deleted: "0.91", blind: "Adapter" },
-  { name: "Dahua", status: "pending" as Status, layout: "DHFS with DHAV records", time: "Packed date, local time", frames: "n/a", deleted: "n/a", blind: "Target 0.90" },
-  { name: "CP Plus", status: "pending" as Status, layout: "Expected DHAV (to verify)", time: "Expected packed date", frames: "n/a", deleted: "n/a", blind: "n/a" },
+  { name: "Dahua", status: "synthetic" as Status, layout: "DHFS 4.1 clusters holding DHAV frames", time: "Packed date, recorder clock", frames: "n/a", deleted: "n/a", blind: "Target 0.90" },
+  { name: "CP Plus", status: "synthetic" as Status, layout: "Dahua DHFS (a listed Dahua OEM, no CP Plus disk read)", time: "Packed date, recorder clock", frames: "n/a", deleted: "n/a", blind: "n/a" },
   { name: "Honeywell", status: "synthetic" as Status, layout: "GPT, 20-byte record header", time: "Unix microseconds", frames: "n/a", deleted: "n/a", blind: "n/a" },
-  { name: "Uniview", status: "pending" as Status, layout: "Unknown, to be induced", time: "Unknown", frames: "n/a", deleted: "n/a", blind: "n/a" },
-  { name: "Godrej", status: "pending" as Status, layout: "Unknown, to be induced", time: "Unknown", frames: "n/a", deleted: "n/a", blind: "n/a" },
-  { name: "Matrix", status: "pending" as Status, layout: "Unknown, to be induced", time: "Unknown", frames: "n/a", deleted: "n/a", blind: "n/a" },
-  { name: "TP-Link", status: "research" as Status, layout: "From teardown reports", time: "Not known", frames: "n/a", deleted: "n/a", blind: "n/a" },
+  { name: "Uniview", status: "synthetic" as Status, layout: "UBS blocks of 256 MiB, GOPs with length trailers", time: "Unix seconds, recorder clock", frames: "n/a", deleted: "n/a", blind: "n/a" },
+  { name: "Godrej", status: "synthetic" as Status, layout: "Qualvision QVFS frame chain, 20-byte heads", time: "Dahua packed date, recorder clock", frames: "n/a", deleted: "n/a", blind: "n/a" },
+  { name: "Matrix", status: "synthetic" as Status, layout: "ext folders CameraNN/date/hour, .stm files", time: "From folder and file names", frames: "n/a", deleted: "n/a", blind: "n/a" },
+  { name: "TP-Link", status: "synthetic" as Status, layout: "Raw 1 GiB zones, 80-byte GOP index", time: "Integer, unit decided from its size", frames: "n/a", deleted: "n/a", blind: "n/a" },
 ]
 
 export default function OemPage() {
@@ -42,7 +42,7 @@ export default function OemPage() {
         {[
           [String(oems.length), "Brands covered"],
           [String(tested), "Tested on a real disk"],
-          ["1", "Synthetic image, labelled"],
+          [String(oems.filter((o) => o.status === "synthetic").length), "Synthetic image, labelled"],
           [String(oems.filter((o) => o.status === "pending").length), "Waiting for a disk"],
         ].map(([n, l]) => (
           <div key={l} className="space-y-1">
@@ -54,7 +54,7 @@ export default function OemPage() {
 
       <Alert>
         <AlertDescription>
-          Only Hikvision has been run on a real disk so far. Dahua and CP Plus parsers exist but have not yet been checked against hardware. Figures appear here as each recorder is imaged.
+          Only Hikvision has been run on a real disk so far. Dahua, CP Plus, Honeywell, Uniview, Godrej, TP-Link and Matrix are built from published descriptions of their layouts and tested on synthetic images only; the Dahua description comes from one real disk, but nothing has been matched against a recorder's own export. Figures appear here as each recorder is imaged.
         </AlertDescription>
       </Alert>
 

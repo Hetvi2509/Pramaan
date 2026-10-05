@@ -20,7 +20,7 @@ class ImageReader:
         if not os.path.exists(self.image_path):
             raise FileNotFoundError(f"Image file not found: {self.image_path}")
         with open(self.image_path, 'rb') as probe:
-            ewf_signature = probe.read(3) in (b'EVF', b'LVF')
+            ewf_signature = probe.read(8) in (b'EVF\x09\x0d\x0a\xff\x00', b'LVF\x09\x0d\x0a\xff\x00')
         if ewf_signature or self.image_path.lower().endswith(('.e01', '.ewf', '.ex01')):
             if not HAS_EWF:
                 raise ImportError("E01/Ex01 reading requires libewf-python (pyewf). Install a compatible libewf build, or supply a decoded raw image.")

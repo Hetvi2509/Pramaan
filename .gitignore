@@ -51,3 +51,14 @@ backend/prisma/*.db-journal
 backend/test-assets/
 checkpoints/
 scratch/
+
+# desktop build output
+build/
+dist-app/
+backend/engine/dist-engine/
+backend/engine/build-engine/
+
+# local run data (database, session secret, uploads) and dev settings
+Pramaan Data/
+backend/settings.json
+release/

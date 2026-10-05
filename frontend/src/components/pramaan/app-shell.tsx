@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from "react-router-dom"
 import {
   FolderSimpleIcon,
+  BrainIcon,
   ListChecksIcon,
   MagnifyingGlassIcon,
   ScalesIcon,
@@ -54,23 +55,26 @@ import {
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { LogoMark, Wordmark } from "@/components/pramaan/logo"
-import { MenuBar } from "@/components/pramaan/menu-bar"
-import { cases } from "@/lib/mock"
-import { getToken, clearSession } from "@/lib/api"
+import { ChatWidget } from "@/components/pramaan/chat-widget"
+import { api, getToken, getUser, clearSession, type ApiCase } from "@/lib/api"
 import { caseNav, navGroups } from "@/lib/nav"
 
 
-function useCommandKey(open: () => void) {
+function useCommandKey(open: () => void, newCase: () => void) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) {
+      if (!(e.metaKey || e.ctrlKey)) return
+      if (e.key.toLowerCase() === "k") {
         e.preventDefault()
         open()
+      } else if (e.key.toLowerCase() === "n") {
+        e.preventDefault()
+        newCase()
       }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [open])
+  }, [open, newCase])
 }
 
 function AppSidebar() {
@@ -84,8 +88,7 @@ function AppSidebar() {
       return null
     }
   })()
-  // A real (backend) case id is not in the sample list, so trust the URL before falling back.
-  const current = caseId ? (cases.find((c) => c.id === caseId) ?? { id: caseId }) : (cases.find((c) => c.id === stored) ?? (stored ? { id: stored } : cases[0]))
+  const current = caseId ? { id: caseId } : stored ? { id: stored } : null
   useEffect(() => {
     if (!caseId) return
     try {
@@ -125,6 +128,14 @@ function AppSidebar() {
                   <NavLink to="/oem">
                     <ScalesIcon />
                     <span>OEM comparison</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === "/knowledge"}>
+                  <NavLink to="/knowledge">
+                    <BrainIcon />
+                    <span>Knowledge base</span>
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -174,12 +185,14 @@ function AppSidebar() {
 
 function Topbar({ onSearch }: { onSearch: () => void }) {
   const navigate = useNavigate()
+  const username = getUser()?.username ?? "User"
+  const initials = username.split(/[\s._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "U"
   const match = useMatch("/cases/:caseId/*")
   const tail = match?.params["*"]
   const section = caseNav.find((n) => n.to === (tail ?? "")) ?? (tail ? undefined : caseNav[0])
 
   return (
-    <header className="sticky top-9 z-20 flex h-14 items-center gap-3 border-b border-hairline bg-background/90 px-5 backdrop-blur-sm">
+    <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-hairline bg-background/90 px-5 backdrop-blur-sm">
       <SidebarTrigger className="-ml-1 text-muted-foreground" />
       <Breadcrumb>
         <BreadcrumbList className="text-body">
@@ -231,14 +244,14 @@ function Topbar({ onSearch }: { onSearch: () => void }) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Account menu" className="rounded-full">
               <Avatar className="size-8">
-                <AvatarFallback className="bg-primary-soft text-caption font-medium text-primary-soft-foreground">RD</AvatarFallback>
+                <AvatarFallback className="bg-primary-soft text-caption font-medium text-primary-soft-foreground">{initials}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-60">
             <DropdownMenuLabel className="space-y-0.5 py-2">
-              <p className="text-body font-medium text-foreground">R. Deshmukh</p>
-              <p className="text-caption font-normal text-muted-foreground">Inspector, Cyber Forensics Lab</p>
+              <p className="text-body font-medium text-foreground">{username}</p>
+              <p className="text-caption font-normal text-muted-foreground">{getUser()?.email ?? "Cyber Forensics Lab"}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
@@ -261,8 +274,11 @@ function Topbar({ onSearch }: { onSearch: () => void }) {
 
 export function AppShell() {
   const [open, setOpen] = useState(false)
+  const [recent, setRecent] = useState<ApiCase[]>([])
+  // The search box lists this user's own cases, read when it opens.
+  useEffect(() => { if (open) api.listCases().then((r) => setRecent(r.data.slice(0, 5))).catch(() => setRecent([])) }, [open])
   const navigate = useNavigate()
-  useCommandKey(() => setOpen(true))
+  useCommandKey(() => setOpen(true), () => navigate("/cases?new=1"))
 
   useEffect(() => {
     if (!getToken()) navigate("/login", { replace: true })
@@ -275,8 +291,7 @@ export function AppShell() {
 
   return (
     <TooltipProvider delayDuration={200}>
-      <SidebarProvider className="pt-9">
-        <MenuBar nav={caseNav} onSearch={() => setOpen(true)} />
+      <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="min-w-0 bg-background">
           <Topbar onSearch={() => setOpen(true)} />
@@ -289,19 +304,24 @@ export function AppShell() {
       <CommandDialog open={open} onOpenChange={setOpen} title="Search" description="Jump to a case, or run an action">
         <CommandInput placeholder="Search cases, evidence, actions…" />
         <CommandList>
-          <CommandEmpty>Nothing matches. Try a case number or FIR.</CommandEmpty>
-          <CommandGroup heading="Recent cases">
-            {cases.slice(0, 3).map((c) => (
-              <CommandItem key={c.id} value={`${c.id} ${c.title} ${c.fir}`} onSelect={() => go(`/cases/${c.id}`)}>
-                <FolderSimpleIcon />
-                <span className="truncate">{c.title}</span>
-                <CommandShortcut className="font-mono">{c.id.slice(-4)}</CommandShortcut>
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          <CommandEmpty>Nothing matches. Try a case name or number.</CommandEmpty>
+          {recent.length > 0 && (
+            <CommandGroup heading="Your cases">
+              {recent.map((c) => (
+                <CommandItem key={c.id} value={`${c.id} ${c.name}`} onSelect={() => go(`/cases/${c.id}`)}>
+                  <FolderSimpleIcon />
+                  <span className="truncate">{c.name}</span>
+                  <CommandShortcut className="font-mono">#{c.id}</CommandShortcut>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
           <CommandGroup heading="Actions">
             <CommandItem onSelect={() => go("/cases?new=1")}>
               <PlusIcon /> New case
+            </CommandItem>
+            <CommandItem onSelect={() => go("/knowledge")}>
+              <BrainIcon /> Open knowledge base
             </CommandItem>
             <CommandItem onSelect={() => go("/audit")}>
               <ListChecksIcon /> Open audit trail
@@ -309,7 +329,8 @@ export function AppShell() {
           </CommandGroup>
         </CommandList>
       </CommandDialog>
-      <Toaster position="bottom-right" />
+      <ChatWidget />
+      <Toaster position="top-center" />
     </TooltipProvider>
   )
 }

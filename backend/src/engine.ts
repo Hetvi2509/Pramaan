@@ -102,6 +102,13 @@ export function startTask(kind: string, taskArgs: string[], options: {
         try {
           const parsed = JSON.parse(line);
           if (parsed.type === "forensics_result") result = parsed.data;
+          // A tool that says it finished but never wrote the file it names did not finish. The object tool does this when it
+          // cannot read the video: it prints an error, then still reports success.
+          if (/_complete$/.test(String(parsed.type)) && parsed.success === true && typeof parsed.output_path === "string" && !fs.existsSync(parsed.output_path)) {
+            parsed.type = String(parsed.type).replace(/_complete$/, "_error");
+            parsed.success = false;
+            parsed.error = "The tool finished but did not write its output file, which usually means it could not read the input video.";
+          }
           const type = parsed.type || "";
           push({ channel: classify(type), data: parsed });
         } catch {
@@ -118,6 +125,7 @@ export function startTask(kind: string, taskArgs: string[], options: {
   });
 
   child.on("close", async (code) => {
+    console.log(`[engine] ${kind} finished with exit code ${code}`);
     try {
       if (code === 0 && options.onResult) {
         if (result === undefined) throw new Error("Engine returned no result");

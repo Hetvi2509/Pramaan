@@ -19,9 +19,9 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { PageHeader } from "@/components/pramaan/page-header"
-import { api, getUser, type ApiCase, type ApiImageFile } from "@/lib/api"
-import { cases as mockCases } from "@/lib/mock"
-import { buildReportData, computeSections, downloadJson, openPrintable, renderReportHtml, sha256Hex, type ReportData } from "@/lib/report"
+import { api, getUser, type ApiCase } from "@/lib/api"
+import { loadCaseData, useCaseData } from "@/lib/case-data"
+import { buildReportData, computeSections, downloadJson, openPrintable, renderReportHtml, sha256Hex } from "@/lib/report"
 import { cn } from "@/lib/utils"
 
 const formats = [
@@ -36,19 +36,17 @@ export default function ReportPage() {
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
   const [part, setPart] = useState<"a" | "b">("b")
-  const [expertName, setExpertName] = useState("R. Deshmukh")
+  const [expertName, setExpertName] = useState(getUser()?.username ?? "")
 
   const [realCase, setRealCase] = useState<ApiCase | null>(null)
-  const [images, setImages] = useState<ApiImageFile[]>([])
+  const data = useCaseData(caseId)
 
   useEffect(() => {
     if (!caseId) return
     api.getCase(caseId).then((r) => setRealCase(r.data)).catch(() => setRealCase(null))
-    api.listImages(caseId).then((r) => setImages(r.data)).catch(() => setImages([]))
   }, [caseId])
 
-  const mockCase = useMemo(() => mockCases.find((c) => c.id === caseId) ?? mockCases[0], [caseId])
-  const sections = useMemo(() => computeSections(images), [images])
+  const sections = useMemo(() => computeSections(data), [data])
   const open = sections.filter((s) => !s.ready)
 
   const toggle = (id: string, on: boolean) => setPicked((p) => (on ? [...p, id] : p.filter((x) => x !== id)))
@@ -57,25 +55,20 @@ export default function ReportPage() {
     setConfirm(false)
     setBusy(true)
     try {
-      const data: ReportData = await buildReportData(
-        caseId,
-        { real: realCase, mock: mockCase },
-        images,
-        (imageId) => api.getForensics(imageId).then((r) => r.data),
-        { part, expertName },
-        getUser()?.username ?? "Examiner"
-      )
-      const jsonForHash = JSON.stringify(data)
-      const reportHash = await sha256Hex(jsonForHash)
+      // Read the evidence again now, so the report reflects the case as it stands at this moment.
+      const fresh = await loadCaseData(caseId)
+      const report = buildReportData(realCase, caseId, fresh, { part, expertName }, getUser()?.username ?? "Examiner")
+      const reportHash = await sha256Hex(JSON.stringify(report))
 
       if (picked.includes("pdf") || picked.includes("s63")) {
-        const html = renderReportHtml(data, picked, reportHash)
-        openPrintable(html)
+        openPrintable(renderReportHtml(report, picked, reportHash))
       }
       if (picked.includes("json")) {
-        downloadJson(data, reportHash, `${data.caseInfo.id || "report"}-${format(data.generatedAt)}.json`)
+        downloadJson(report, reportHash, `${report.caseInfo.id || "report"}-${format(report.generatedAt)}.json`)
       }
-      toast.success("Report generated", { description: `${picked.length} file${picked.length === 1 ? "" : "s"} produced, hash ${reportHash.slice(0, 12)}…` })
+      // The audit trail records that this report exists, by its hash.
+      const logged = await api.reportGenerated(caseId, reportHash, picked).then(() => true).catch(() => false)
+      toast.success("Report generated", { description: `${picked.length} file${picked.length === 1 ? "" : "s"} produced, hash ${reportHash.slice(0, 12)}…${logged ? "" : " (could not be added to the audit trail)"}` })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to generate report")
     } finally {
@@ -164,7 +157,7 @@ export default function ReportPage() {
                 </RadioGroup>
                 <Field>
                   <FieldLabel htmlFor="expert">Expert name</FieldLabel>
-                  <Input id="expert" value={expertName} onChange={(e) => setExpertName(e.target.value)} />
+                  <Input id="expert" value={expertName} placeholder="Name of the certifying expert" onChange={(e) => setExpertName(e.target.value)} />
                 </Field>
               </FieldGroup>
             </CardContent>
