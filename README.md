@@ -619,5 +619,4 @@ No license file is currently published for this repository. All rights reserved 
 
 <p align="center">
   Built with 🔥 by Henit Panchal, Hetvi Hinsu, Heny Patel, Mihir Patel, Aarav Shah &amp; Dhwani Thakkar<br/>
-  for Smart India Hackathon 2026 · Problem Statement 150
 </p>
