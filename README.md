@@ -8,7 +8,7 @@
 
 <p align="center">
   <b>A vendor-agnostic DVR / NVR digital-forensics platform</b> for investigators who need to recover, date and
-  prove CCTV evidence from seized recorders — whatever the brand — with hash-verified chain of custody, built for
+  prove CCTV evidence from seized recorders — whatever the brand — with hash-verified chain of custody, built for User.
   <b>.
 </p>
 
