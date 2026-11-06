@@ -9,7 +9,7 @@
 <p align="center">
   <b>A vendor-agnostic DVR / NVR digital-forensics platform</b> for investigators who need to recover, date and
   prove CCTV evidence from seized recorders — whatever the brand — with hash-verified chain of custody, built for
-  <b>SIH 2026 · Problem Statement 150</b>.
+  <b>.
 </p>
 
 <p align="center">
@@ -65,7 +65,7 @@ designed, coded and tested by:
 **Windows 10 / 11 (64-bit) installer:** [`Pramaan-Setup-0.5.2.exe` (1.15 GB)](https://github.com/Hetvi2509/SIH_PS_150/releases/download/v0.5.2/Pramaan-Setup-0.5.2.exe)
 
 Everything runs on your computer, offline: no Python, Node or database to install, and the video, OCR, face, object
-and upscaling tools are bundled. All releases: [Releases page](https://github.com/Hetvi2509/SIH_PS_150/releases).
+and upscaling tools are bundled. All releases: [Releases page](https://github.com/Hetvi2509/_PS_150/releases).
 
 1. Download the installer and run it. Windows SmartScreen may say "Windows protected your PC" because the
    installer is not code-signed: choose **More info → Run anyway**. Pick any drive; it needs about 5 GB.
@@ -356,7 +356,7 @@ Pramaan is a single-examiner workstation, so access is deliberately simple and s
 ## 📁 Project Structure
 
 ```
-SIH-2026-PS150/
+S-2026-PS150/
 ├── Architecture.png            # System architecture diagram (shown in this README)
 ├── plan.md                     # Full technical/research plan (modules M0–M10, novelty map, schedule)
 ├── pramaan_logo.jpeg           # Product logo
@@ -597,7 +597,7 @@ This is a hackathon-stage build, and the interface is explicit about what is est
   unsigned.
 
 **Next:** validate every adapter against real seized-and-imaged hardware, deepen deletion and timeline analysis, and
-sign the installer. See [`plan.md`](plan.md) for the full roadmap toward the SIH Grand Finale.
+sign the installer. See [`plan.md`](plan.md) for the full roadmap toward the Grand Finale.
 
 ---
 
